@@ -3,51 +3,65 @@ import { PDFDocument } from "pdf-lib";
 
 export const runtime = "nodejs";
 
-export async function GET() {
-  return NextResponse.json({ ok: true, route: "merge-pdf" });
-}
-
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const files = formData.getAll("files") as File[];
 
-    if (files.length < 2) {
+    const file = formData.get("file") as File;
+
+    if (!file) {
       return NextResponse.json(
-        { error: "Please upload at least 2 PDF files" },
+        { error: "No image uploaded" },
         { status: 400 }
       );
     }
 
-    const mergedPdf = await PDFDocument.create();
+    const bytes = await file.arrayBuffer();
 
-    for (const file of files) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await PDFDocument.load(arrayBuffer, {
-        ignoreEncryption: true,
-      });
+    const pdfDoc = await PDFDocument.create();
 
-      const copiedPages = await mergedPdf.copyPages(
-        pdf,
-        pdf.getPageIndices()
+    let image;
+    let dims;
+
+    if (
+      file.type === "image/jpeg" ||
+      file.type === "image/jpg"
+    ) {
+      image = await pdfDoc.embedJpg(bytes);
+      dims = image.scale(1);
+    } else if (file.type === "image/png") {
+      image = await pdfDoc.embedPng(bytes);
+      dims = image.scale(1);
+    } else {
+      return NextResponse.json(
+        { error: "Only JPG and PNG supported" },
+        { status: 400 }
       );
-
-      copiedPages.forEach((page) => mergedPdf.addPage(page));
     }
 
-    const mergedBytes = await mergedPdf.save();
+    const page = pdfDoc.addPage([dims.width, dims.height]);
 
-    return new NextResponse(Buffer.from(mergedBytes), {
+    page.drawImage(image, {
+      x: 0,
+      y: 0,
+      width: dims.width,
+      height: dims.height,
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": 'attachment; filename="merged.pdf"',
+        "Content-Disposition":
+          'attachment; filename="image.pdf"',
       },
     });
   } catch (error) {
-    console.error("MERGE PDF ERROR:", error);
+    console.error(error);
 
     return NextResponse.json(
-      { error: "Merge failed" },
+      { error: "Convert failed" },
       { status: 500 }
     );
   }
