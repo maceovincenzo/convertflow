@@ -224,7 +224,7 @@ if (selectedTool.title === "ลบหน้า PDF") {
         </p>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          {tools.map((tool) => (
+          {tools.filter(tool => tool.working).map((tool) => (
             <button
               key={tool.title}
               onClick={() => {
