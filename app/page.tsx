@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import JSZip from "jszip";
 
 const tools = [
   { icon: "🧩", title: "รวม PDF", desc: "รวมหลายไฟล์ PDF เป็นไฟล์เดียว", working: true },
@@ -9,7 +10,7 @@ const tools = [
   { icon: "🗜️", title: "บีบอัด PDF", desc: "ลดขนาดไฟล์ PDF", working: false },
   { icon: "📝", title: "PDF เป็น Word", desc: "แปลง PDF เป็น DOCX", working: false },
   { icon: "📄", title: "Word เป็น PDF", desc: "แปลง DOCX เป็น PDF", working: false },
-  { icon: "🖼️", title: "PDF เป็น JPG", desc: "แปลงหน้า PDF เป็นรูปภาพ", working: false },
+  { icon: "🖼️", title: "PDF เป็น JPG", desc: "แปลงหน้า PDF เป็นรูปภาพ", working: true },
   { icon: "🌅", title: "JPG เป็น PDF", desc: "รวมรูปภาพเป็น PDF", working: true },
   { icon: "🎨", title: "แปลงรูปภาพ", desc: "JPG, PNG, WEBP", working: true },
   { icon: "🎵", title: "แปลงเสียง", desc: "MP3, WAV, M4A", working: false },
@@ -66,6 +67,65 @@ export default function Home() {
     try {
       setStatus("กำลังประมวลผล...");
       setDownloadUrl("");
+
+  if (selectedTool.title === "PDF เป็น JPG") {
+  setStatus("กำลังแปลง PDF เป็น JPG...");
+
+  const file = files[0];
+  const arrayBuffer = await file.arrayBuffer();
+
+  const pdfjsLib = await import("pdfjs-dist");
+
+  const pdf = await pdfjsLib.getDocument({
+    data: new Uint8Array(arrayBuffer),
+  disableWorker: true,
+} as any).promise;
+
+  const zip = new JSZip();
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Canvas not supported");
+    }
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+      canvasContext: context,
+      viewport,
+    } as any).promise;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (result) => {
+          if (result) resolve(result);
+          else reject(new Error("แปลง JPG ไม่สำเร็จ"));
+        },
+        "image/jpeg",
+        0.95
+      );
+    });
+
+    zip.file(`page-${i}.jpg`, blob);
+  }
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(zipBlob);
+
+  setDownloadUrl(url);
+  setDownloadName("pdf-to-jpg.zip");
+  setStatus("แปลง PDF เป็น JPG สำเร็จแล้ว");
+
+  return;
+}
+
 if (selectedTool.title === "ลบหน้า PDF") {
   const formData = new FormData();
   formData.append("file", files[0]);
@@ -200,157 +260,263 @@ if (selectedTool.title === "ลบหน้า PDF") {
       ? "image/jpeg,image/png,image/webp"
       : "*";
 
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-orange-50 text-[#27212E]">
-      <header className="sticky top-0 z-50 border-b border-pink-100 bg-white/80 backdrop-blur-xl">
-  <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-    <h1 className="text-2xl font-black">
-      <span className="text-pink-500">💗</span> ConvertFlow ✨
-    </h1>
+return (
+  <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_7%_28%,#EEF2FF_0,transparent_30%),radial-gradient(circle_at_96%_30%,#F5EFFF_0,transparent_32%),linear-gradient(180deg,#FFFFFF_0%,#F8FAFF_60%,#FFFFFF_100%)] text-slate-900">
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-[90px] max-w-[1440px] items-center justify-between px-12">
+        <div className="flex items-center gap-4">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-500 text-2xl text-white shadow-lg shadow-violet-200">
+            📄
+          </div>
 
-    <nav className="hidden items-center gap-8 text-sm font-bold text-[#7B7286] md:flex">
-      <a href="#tools" className="hover:text-pink-500">เครื่องมือ</a>
-      <a href="#upload" className="hover:text-pink-500">อัปโหลด</a>
-      <a href="#footer" className="hover:text-pink-500">ติดต่อเรา</a>
-    </nav>
-  </div>
-</header>
-
-      <section className="relative mx-auto max-w-7xl px-6 py-14 text-center">
-
-  <div className="mx-auto mb-6 w-fit rounded-full bg-white px-5 py-2 text-sm font-bold text-[#7B7286] shadow-sm">
-    💗 เครื่องมือแปลงไฟล์ครบในที่เดียว
-  </div>
-
-  <h2 className="text-5xl font-black tracking-tight md:text-7xl">
-    แปลงไฟล์ได้ง่าย ๆ
-    <span className="block text-[#FF4F8B]">เหมือนนับ 1 2 3</span>
-  </h2>
-
-  <p className="mx-auto mt-5 max-w-2xl text-xl font-bold text-[#FF4F8B]">
-    น่ารัก ใช้งานง่าย สำหรับทุกคน 💗
-  </p>
-
-  <div id="tools" className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-    {tools.filter((tool) => tool.working).map((tool) => (
-      <button
-        key={tool.title}
-        onClick={() => {
-          setSelectedTool(tool);
-          reset();
-        }}
-       className={`rounded-[1.5rem] border px-5 py-7 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
-  selectedTool.title === tool.title
-            ? "border-[#FF4F8B] bg-[#FFF0F6] shadow-pink-100"
-    : "border-pink-100 bg-white/85"
-}`}
-      >
-        <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-pink-50 text-4xl">
-          {tool.icon}
+          <div>
+            <h1 className="text-2xl font-black leading-none tracking-tight">
+              <span>File</span>
+              <span className="text-violet-600">Convert</span>
+            </h1>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              แปลงไฟล์ออนไลน์ ฟรี!
+            </p>
+          </div>
         </div>
-        <p className="text-lg font-black">{tool.title}</p>
-        <p className="mt-2 text-sm text-[#7B7286]">{tool.desc}</p>
-        <p className="mt-4 inline-block rounded-full bg-pink-100 px-4 py-2 text-xs font-black text-[#FF4F8B]">
-          ใช้งานได้จริง
-        </p>
-      </button>
-    ))}
-  </div>
-</section>
-<section id="upload" className="mx-auto max-w-5xl px-6 pb-24">
-  <div className="relative overflow-hidden rounded-[2.5rem] border-2 border-dashed border-pink-300 bg-white/85 p-8 shadow-2xl shadow-pink-100">
 
-    <div className="absolute left-6 top-8 text-6xl">☁️</div>
-    <div className="absolute right-4 top-10 text-6xl">📁</div>
+        <nav className="hidden items-center gap-20 text-base font-bold text-slate-700 md:flex">
+          <a href="#tools" className="hover:text-violet-600">เครื่องมือ</a>
+          <a href="#upload" className="hover:text-violet-600">วิธีใช้</a>
+          <a href="#" className="hover:text-violet-600">ราคา</a>
+          <a href="#" className="hover:text-violet-600">บทความ</a>
+        </nav>
 
-    <div className="mb-8 text-center">
-      <div className="mx-auto mb-3 grid h-20 w-20 place-items-center rounded-full bg-pink-50 text-4xl shadow-sm">
+        <div className="flex items-center gap-5">
+          <button className="grid h-12 w-12 place-items-center rounded-full border border-slate-200 bg-white text-xl shadow-sm">
+            🌙
+          </button>
+
+          <button className="rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-8 py-3 text-base font-black text-white shadow-lg shadow-violet-200">
+            เข้าสู่ระบบ
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section className="relative mx-auto max-w-[1440px] px-12 pt-7 text-center">
+      <div className="pointer-events-none absolute left-4 top-16 hidden h-52 w-52 rotate-[-15deg] items-center justify-center rounded-[2.2rem] bg-violet-100/40 text-8xl opacity-60 shadow-2xl md:flex">
+        📄
+      </div>
+
+      <div className="pointer-events-none absolute right-20 top-20 hidden text-7xl opacity-35 md:block">
         ☁️
       </div>
 
-      <p className="text-sm font-black text-pink-500">
-        เครื่องมือที่เลือก
+      <div className="pointer-events-none absolute left-48 top-8 text-4xl opacity-60">✨</div>
+      <div className="pointer-events-none absolute left-64 top-44 h-5 w-5 rounded-full bg-violet-400 opacity-55" />
+      <div className="pointer-events-none absolute left-72 top-24 h-3 w-3 rounded-full bg-pink-300 opacity-70" />
+      <div className="pointer-events-none absolute right-48 top-40 h-5 w-5 rounded-full bg-violet-400 opacity-55" />
+      <div className="pointer-events-none absolute right-28 bottom-24 text-4xl opacity-50">✨</div>
+
+      <h2 className="mx-auto max-w-5xl text-6xl font-black leading-[1.08] tracking-tight text-slate-900 md:text-7xl">
+        แปลงไฟล์
+        <span className="bg-gradient-to-r from-violet-600 to-indigo-500 bg-clip-text text-transparent">
+          ง่าย ๆ
+        </span>
+        ในไม่กี่วินาที
+      </h2>
+
+      <p className="mx-auto mt-4 max-w-3xl text-xl font-semibold leading-8 text-slate-600">
+        รองรับไฟล์หลากหลายรูปแบบ ใช้งานฟรี ไม่ต้องสมัครสมาชิก
+        <br />
+        ปลอดภัย ไม่เก็บข้อมูลไฟล์ของคุณ 🛡️
       </p>
+    </section>
 
-      <h3 className="mt-2 text-4xl font-black text-[#27212E]">
-        {selectedTool.title}
-      </h3>
+    <section id="upload" className="relative mx-auto mt-5 max-w-[800px] px-6">
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-3 shadow-2xl shadow-violet-100">
+        <div className="relative overflow-hidden rounded-[1.6rem] border-2 border-dashed border-violet-300 px-8 py-8 text-center">
+          <div className="pointer-events-none absolute left-5 top-4 text-4xl opacity-45">☁️</div>
+          <div className="pointer-events-none absolute right-5 top-4 text-4xl opacity-45">☁️</div>
 
-      <p className="mt-2 text-[#7B7286]">
-        {selectedTool.desc}
-      </p>
-    </div>
+          <div className="mx-auto mb-3 grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-500 text-5xl shadow-xl shadow-violet-200">
+            📁
+          </div>
 
-    {selectedTool.title === "แปลงรูปภาพ" && (
-      <select
-        value={targetFormat}
-        onChange={(e) => setTargetFormat(e.target.value)}
-        className="mb-6 w-full rounded-2xl border border-[#D8CCFF] bg-white px-4 py-4 font-bold outline-none"
-      >
-        <option value="png">PNG</option>
-        <option value="jpeg">JPG</option>
-        <option value="webp">WEBP</option>
-      </select>
-    )}
+          <h3 className="text-2xl font-black text-slate-900">
+            ลากไฟล์มาวางที่นี่
+          </h3>
 
-    <label className="flex cursor-pointer flex-col items-center justify-center rounded-[1.8rem] border-2 border-dashed border-[#D8CCFF] bg-[#FFFCFF] px-6 py-14 text-center hover:bg-[#FFF6FC]">
+          <p className="mt-1 text-sm font-bold text-slate-500">หรือ</p>
 
-      <input
-        type="file"
-        ref={inputRef}
-        multiple={selectedTool.title === "รวม PDF"}
-        accept={acceptType}
-        className="hidden"
-        onChange={(e) => chooseFiles(e.target.files)}
-      />
+          {selectedTool.title === "แปลงรูปภาพ" && (
+            <select
+              value={targetFormat}
+              onChange={(e) => setTargetFormat(e.target.value)}
+              className="mx-auto mt-4 block w-full max-w-xs rounded-2xl border border-violet-200 bg-white px-5 py-3 font-bold text-slate-700 outline-none"
+            >
+              <option value="png">PNG</option>
+              <option value="jpeg">JPG</option>
+              <option value="webp">WEBP</option>
+            </select>
+          )}
 
-      <div className="mb-4 text-5xl">
-        {selectedTool.icon}
+          {selectedTool.title === "ลบหน้า PDF" && (
+            <input
+              type="text"
+              value={pagesToDelete}
+              onChange={(e) => setPagesToDelete(e.target.value)}
+              placeholder="ใส่หน้าที่ต้องการลบ เช่น 2,4,5"
+              className="mx-auto mt-4 block w-full max-w-md rounded-2xl border border-violet-200 bg-white px-5 py-3 font-bold text-slate-700 outline-none"
+            />
+          )}
+
+          <label className="mx-auto mt-4 inline-flex cursor-pointer items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-500 px-9 py-3 text-base font-black text-white shadow-lg shadow-violet-200 transition hover:scale-105">
+            เลือกไฟล์จากคอมพิวเตอร์
+            <span>📂</span>
+
+            <input
+              ref={inputRef}
+              type="file"
+              multiple={selectedTool.title === "รวม PDF"}
+              accept={acceptType}
+              className="hidden"
+              onChange={(e) => chooseFiles(e.target.files)}
+            />
+          </label>
+
+          <p className="mt-4 text-sm font-semibold leading-6 text-slate-500">
+            รองรับไฟล์: PDF, JPG, PNG, GIF, MP4, MP3, DOCX, XLSX, PPTX, TXT และอื่น ๆ
+            <br />
+            ขนาดสูงสุด 100MB
+          </p>
+
+          {files.length > 0 && (
+            <div className="mx-auto mt-4 max-w-xl rounded-2xl bg-violet-50 px-5 py-4 text-left">
+              <p className="mb-2 font-black text-slate-800">
+                ไฟล์ที่เลือก ({files.length} ไฟล์)
+              </p>
+
+              {files.map((file, index) => (
+                <p key={index} className="mt-1 truncate text-sm font-bold text-slate-600">
+                  {index + 1}. {file.name}
+                </p>
+              ))}
+
+              {preview &&
+                selectedTool.title !== "รวม PDF" &&
+                selectedTool.title !== "แยก PDF" && (
+                  <img
+                    src={preview}
+                    alt="preview"
+                    className="mt-4 max-h-72 w-full rounded-2xl bg-white object-contain"
+                  />
+                )}
+            </div>
+          )}
+
+          <button
+            onClick={convertFile}
+            disabled={files.length === 0}
+            className="mx-auto mt-5 block w-full max-w-md rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-400 px-8 py-3 text-base font-black text-white shadow-lg shadow-violet-200 transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            เริ่มใช้งาน {selectedTool.title}
+          </button>
+
+          {status && (
+            <p className="mt-3 text-center text-sm font-black text-slate-600">
+              {status}
+            </p>
+          )}
+
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              download={downloadName}
+              className="mx-auto mt-4 block w-full max-w-md rounded-2xl bg-slate-900 px-8 py-3 text-center text-base font-black text-white transition hover:bg-slate-800"
+            >
+              ดาวน์โหลด {downloadName}
+            </a>
+          )}
+        </div>
       </div>
+    </section>
 
-      <p className="text-xl font-black">
-        {selectedTool.title === "รวม PDF"
-          ? "เลือก PDF หลายไฟล์"
-          : "เลือกไฟล์"}
-      </p>
+    <section id="tools" className="mx-auto mt-3 max-w-[1410px] px-12 pb-8">
+      <div className="rounded-[2.2rem] bg-white/95 p-5 shadow-2xl shadow-violet-100">
+        <div className="mb-4 text-center">
+          <h2 className="text-2xl font-black text-slate-900">
+            ✨ เครื่องมือแปลงไฟล์ยอดนิยม ✨
+          </h2>
+        </div>
 
-      <p className="mt-2 text-sm text-[#7B7286]">
-        อัปโหลดไฟล์สำหรับ {selectedTool.title}
-      </p>
-    </label>
+        <div className="grid gap-5 lg:grid-cols-6">
+          {tools.filter((tool) => tool.working).map((tool) => (
+            <button
+              key={tool.title}
+              onClick={() => {
+                setSelectedTool(tool);
+                reset();
+              }}
+              className={`min-h-[240px] rounded-[1.6rem] border bg-white p-5 text-center shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${
+                selectedTool.title === tool.title
+                  ? "border-violet-400 shadow-violet-100 ring-2 ring-violet-100"
+                  : "border-slate-200"
+              }`}
+            >
+              <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-50 text-4xl">
+                {tool.icon}
+              </div>
 
-    {files.length > 0 && (
-      <div className="mt-6 rounded-2xl bg-pink-50 p-4">
-        <p className="font-black">
-          เลือกแล้ว {files.length} ไฟล์
-        </p>
+              <p className="text-lg font-black text-slate-900">
+                {tool.title}
+              </p>
+
+              <p className="mt-2 min-h-12 text-sm font-semibold leading-6 text-slate-500">
+                {tool.desc}
+              </p>
+
+              <p className="mt-4 inline-flex rounded-xl bg-violet-50 px-4 py-2 text-sm font-black text-violet-600">
+                ใช้งานได้จริง
+              </p>
+            </button>
+          ))}
+
+          <button className="min-h-[240px] rounded-[1.6rem] border border-slate-200 bg-white p-5 text-center shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-violet-100 text-4xl">
+              🔲
+            </div>
+
+            <p className="text-lg font-black text-slate-900">
+              เครื่องมือเพิ่มเติม
+            </p>
+
+            <p className="mt-2 min-h-12 text-sm font-semibold leading-6 text-slate-500">
+              เครื่องมืออื่น ๆ อีกมากมาย รอคุณอยู่
+            </p>
+
+            <p className="mt-4 inline-flex rounded-xl bg-violet-50 px-4 py-2 text-sm font-black text-violet-600">
+              ดูทั้งหมด
+            </p>
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-4 rounded-[1.6rem] bg-slate-50/90 p-5 md:grid-cols-4">
+          {[
+            ["⚡", "รวดเร็ว", "แปลงไฟล์ได้ในไม่กี่วินาที", "bg-violet-100"],
+            ["🛡️", "ปลอดภัย 100%", "ไม่เก็บข้อมูลไฟล์ของคุณ", "bg-green-100"],
+            ["⬇️", "ดาวน์โหลดง่าย", "เสร็จแล้วโหลดได้ทันที", "bg-blue-100"],
+            ["📱", "รองรับทุกอุปกรณ์", "คอมพิวเตอร์ มือถือ แท็บเล็ต", "bg-orange-100"],
+          ].map((item) => (
+            <div key={item[1]} className="flex items-center gap-4 border-slate-200 md:border-r last:border-r-0">
+              <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-3xl ${item[3]} text-3xl`}>
+                {item[0]}
+              </div>
+              <div>
+                <p className="text-lg font-black text-slate-900">{item[1]}</p>
+                <p className="text-sm font-semibold text-slate-500">{item[2]}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    )}
-
-    <button
-      onClick={convertFile}
-      className="mt-6 w-full rounded-[1.5rem] bg-[#9B7CFF] px-6 py-4 font-black text-white hover:bg-[#8567F0]"
-    >
-      เริ่มใช้งาน {selectedTool.title}
-    </button>
-
-    {status && (
-      <p className="mt-4 text-center text-sm font-bold text-[#7B7286]">
-        {status}
-      </p>
-    )}
-
-    {downloadUrl && (
-      <a
-        href={downloadUrl}
-        download={downloadName}
-        className="mt-5 block w-full rounded-[1.5rem] bg-[#27212E] px-6 py-4 text-center font-black text-white hover:bg-[#3A3144]"
-      >
-        ดาวน์โหลด {downloadName}
-      </a>
-    )}
-  </div>
-</section>
-    </main>
-  );
+    </section>
+  </main>
+);
 }
