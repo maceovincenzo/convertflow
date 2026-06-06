@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import JSZip from "jszip";
+import { signIn } from "next-auth/react";
 
 const tools = [
   { icon: "🧩", title: "รวม PDF", desc: "รวมหลายไฟล์ PDF เป็นไฟล์เดียว", working: true },
@@ -291,10 +292,12 @@ return (
           <button className="grid h-12 w-12 place-items-center rounded-full border border-slate-200 bg-white text-xl shadow-sm">
             🌙
           </button>
-
-          <button className="rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-8 py-3 text-base font-black text-white shadow-lg shadow-violet-200">
-            เข้าสู่ระบบ
-          </button>
+      <button
+        onClick={() => signIn("google")}
+        className="rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-8 py-3 text-base font-black text-white shadow-lg"
+>
+       เข้าสู่ระบบ
+      </button>
         </div>
       </div>
     </header>
